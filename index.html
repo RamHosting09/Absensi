@@ -52,7 +52,10 @@
 
     <!-- Kotak Rekap Tabel Kehadiran -->
     <div class="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden p-6">
-        <h3 class="font-bold text-slate-800 mb-4">📋 Rekap Kehadiran Hari Ini</h3>
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-slate-800">📋 Rekap Kehadiran Tersimpan</h3>
+            <button id="btnReset" class="text-xs bg-red-100 text-red-600 px-2.5 py-1 rounded-lg hover:bg-red-200 transition">Hapus Data</button>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -65,9 +68,7 @@
                     </tr>
                 </thead>
                 <tbody id="tabelAbsen" class="text-sm text-slate-700">
-                    <tr>
-                        <td colspan="5" class="p-4 text-center text-slate-400 italic">Belum ada data absensi masuk.</td>
-                    </tr>
+                    <!-- Data akan dimuat otomatis di sini -->
                 </tbody>
             </table>
         </div>
@@ -81,10 +82,14 @@
         const btnSnap = document.getElementById('btnSnap');
         const absenForm = document.getElementById('absenForm');
         const tabelAbsen = document.getElementById('tabelAbsen');
+        const btnReset = document.getElementById('btnReset');
 
         let streamKamera = null;
         let base64Foto = "";
-        let dataKehadiran = [];
+
+        // Ambil data dari localStorage saat halaman pertama kali dibuka
+        let dataKehadiran = JSON.parse(localStorage.getItem('data_absen_x4')) || [];
+        renderTabel();
 
         // Nyalakan Kamera
         btnKamera.addEventListener('click', async () => {
@@ -106,7 +111,7 @@
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
-            base64Foto = canvas.toDataURL('image/jpeg', 0.5);
+            base64Foto = canvas.toDataURL('image/jpeg', 0.4); // Kompres ukuran kecil agar muat banyak di memori HP
             fotoHasil.src = base64Foto;
             fotoHasil.classList.remove('hidden');
             video.classList.add('hidden');
@@ -117,7 +122,7 @@
             }
         });
 
-        // Submit Form & Masukkan ke Tabel
+        // Submit Form & Simpan ke localStorage
         absenForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const nama = document.getElementById('nama').value;
@@ -130,8 +135,11 @@
                 return;
             }
 
-            // Simpan data ke array
-            dataKehadiran.push({ waktu, nama, nisn, status, foto: base64Foto });
+            // Tambah data baru ke array
+            dataKehadiran.unshift({ waktu, nama, nisn, status, foto: base64Foto });
+
+            // Simpan permanen ke memori HP (localStorage)
+            localStorage.setItem('data_absen_x4', JSON.stringify(dataKehadiran));
 
             // Reset form & foto
             absenForm.reset();
@@ -141,6 +149,16 @@
 
             // Update Tampilan Tabel
             renderTabel();
+            alert("Absensi berhasil disimpan!");
+        });
+
+        // Tombol Reset untuk membersihkan data jika diperlukan
+        btnReset.addEventListener('click', () => {
+            if (confirm("Yakin ingin menghapus seluruh riwayat absen di perangkat ini?")) {
+                localStorage.removeItem('data_absen_x4');
+                dataKehadiran = [];
+                renderTabel();
+            }
         });
 
         function renderTabel() {
